@@ -6,16 +6,29 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation"; // Changed from next/router
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react"; // For loading spinner
+import { Loader2 } from "lucide-react";
 
 // Define the form schema using Zod
 const formSchema = z.object({
   identifier: z.string().min(1, "Email/Username is required"),
   password: z.string().min(1, "Password is required"),
 });
+
+// Define types for Strapi response
+interface StrapiUser {
+  id: number;
+  username: string;
+  email: string;
+}
+
+interface StrapiAuthResponse {
+  error: any;
+  jwt: string;
+  user: StrapiUser;
+}
 
 export default function SignInForm() {
   const router = useRouter();
@@ -37,34 +50,47 @@ export default function SignInForm() {
       setIsLoading(true);
       setError('');
 
-      const response = await fetch('/api/sign-in', {
+      // Get your Strapi URL from environment variable
+      const strapiUrl = 'http://localhost:1337';
+      
+      const response = await fetch(`${strapiUrl}/api/auth/local`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+       
         body: JSON.stringify({
-          identifier: values.identifier,
+          identifier: values.identifier, 
           password: values.password,
         }),
       });
 
-      const data = await response.json();
+      const data: StrapiAuthResponse = await response.json();
+
+      console.log(data.jwt);
+      console.log(data.user.id);
+      
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        throw new Error(data.error?.message || 'Invalid credentials');
       }
 
-      // If successful, store user data and redirect
-      if (data.success) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        router.push('/message-dashboard');
+      if (data.jwt) {
+  
+        localStorage.setItem('jwt', data.jwt);
+        localStorage.setItem('userID', JSON.stringify(data.user.id));
+        
+        router.replace('/message-dashboard');
+
+      } else {
+        throw new Error('Authentication failed');
       }
 
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError('Something went wrong');
+        setError('Something went wrong during sign in');
       }
     } finally {
       setIsLoading(false);
@@ -88,9 +114,9 @@ export default function SignInForm() {
                 name="identifier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email/Username</FormLabel>
+                    <FormLabel>Email or Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="email/username" {...field} />
+                      <Input placeholder="Enter your email or username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -106,7 +132,7 @@ export default function SignInForm() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input placeholder="password" type="password" {...field} />
+                      <Input placeholder="Enter your password" type="password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

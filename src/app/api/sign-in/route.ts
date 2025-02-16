@@ -8,7 +8,8 @@ export async function POST(request: Request) {
 
         const body = await request.json();
         const { email, password } = body;
-
+        console.log(email);
+        
         if (!email) {
             throw new Error("Email field is empty")
         }

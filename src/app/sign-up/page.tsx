@@ -8,6 +8,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDebounceCallback } from "usehooks-ts"; // For debouncing
+import axios from "axios"
+import { useRouter } from "next/navigation"; 
+
 
 // Defining the form schema using Zod
 const formSchema = z.object({
@@ -16,8 +19,11 @@ const formSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+
 export default function SignUpPage() {
   // Initialize the form
+  const router = useRouter();
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -26,11 +32,25 @@ export default function SignUpPage() {
       password: "",
     },
   });
-
+  
   // Handle form submission
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("Form submitted:", values);
+
     // Add your sign-up logic here (e.g., API call)
+    try {
+      const response = await axios.post('http://localhost:1337/api/auth/local/register', {
+        username: values.username,
+        email: values.email,
+        password: values.password
+      })
+      
+      router.replace('/sign-in')
+      
+    } catch (error) {
+      console.log("Error occured in axios",error);
+      
+    }
   };
 
   // Debounced function for username availability check
